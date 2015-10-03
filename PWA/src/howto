@@ -1,0 +1,100 @@
+VERSION = 0.1.0
+
+PWA.Config
+	- host								[="localhost"]
+	- port								[=80]
+	- requestInThread 					[=True]				handle each request in an own thread
+	- runInThread						[=False]			run the server in an own thread
+	- enable_statics					[=False]
+	- statistics_path					[=""]
+	- debug								[=True]
+	- enable_filelog					[=False]
+	- filelog_path						[=""]
+	- filelog_maxsize					[=10240000  (=10MB)]
+	+ __init__()
+
+PWA.UrlConfig
+	+ getHandler(request, server)							returns a handler for the request. Override...
+PWA.SimpleUrlConfig() <- PWA.UrlConfig
+	+ addUrl(regex, handler)								add a new rule for an url. regex could be r"/$" or r"/pages/mainpage$". handler must be a reference to a handler-class, not an instance!
+	+ __init__()
+
+PWA.Handler
+	- _server												running server
+	- _log													log-system
+	- _httpHandler											httpHandler for this request
+	- request												request-information (all infos, like page, cookies, etc.) 
+	- response												response-information to write in
+	+ __init__(server, request, httpHandler)
+	+ finish()												you have to call this function after finished handling the request
+	+ error(errorname)										to send an error-page you have to call this function with the error-page-name as argument
+	+ onHandle()											this function is called when a new request have to been handle. Override...
+PWA.FileHandler <- Handler
+	- _path													the path of the file on local disk
+	+ __init__(path, *a, **k)								see example
+
+PWA.Request
+	- _server												running server
+	- _log													log-system
+	- _httpHandler											httpHandler for this request
+	- path													the path typed in browser (e.g. for "http://127.0.0.1:8080/index.html" -> path="/index.html")
+	- method												the http-method ("GET" or "POST")
+	- client_adress											the client-adress
+	- http_version											the HTTP-version
+	- cookies												a dict with cookies
+	- args													a dict with arguments (GET and POST)
+	- files													a dict with files (only POST)
+	- headers												a dict with headers
+
+PWA.Response
+	- _server												running server
+	- response_code						[=200]				the HTTP-response-code
+	- content_type						[=None]				the content-type
+	- content							[=""]				the content to send back to client
+	- headers							[={}]				a dict with headers
+	- cookies							[={}]				a dict with cookies to write in client's browser
+
+PWA.Errorpage <- PWA.Handler								you cannot call error or finish from an Errorpage. After calling onHandle() the response is send to client
+
+~baseModule~
+	- _server												running server
+	- _log													log-system
+	+ call(action, *a, **k)									this function is called "from outside" to start a function (action) in a module with the args a and the kwds k
+PWA.staticModule <- ~baseModule~							always when caling a module a new instance is created
+PWA.Module <- ~baseModule~									when starting the server a new instance is created. Only this one request is used
+	+ __init__(server, threadSave[=True])					normaly the Module is thread-save (when calling an action via call(...). If you don't want you have to override __init__(...) and set threadSave to False
+
+PWA.ModuleList
+	- modules
+	+ addModule(modname, mod)								add a normal module
+	+ addStaticModule(modname, mod)							add a static module
+	+ getModuleNames()
+	+ getModuleType(modname)								1=static 2=normal
+	+ getModule(modname)
+
+PWA.Server
+	- _config
+	- _urlConfig
+	- _modules
+	- _staticModules
+	- _errorpages
+	- _baseServer
+	- _running
+	- _log
+	
+	+ __init__(config, urlConfig, moduleList=None, errorpages={})
+	+ start()
+	+ stop()
+	+ getModule(modname)
+
+PWA.Log
+	- _config
+	- logger
+    
+    + debug(self, *a, **k)
+    + info(self, *a, **k)
+    + warn(self, *a, **k)
+    + error(self, *a, **k)
+    + critical(self, *a, **k)
+    + exception(self, e, msg="", critical=False)
+	
